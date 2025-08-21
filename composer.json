@@ -20,7 +20,10 @@
     "autoload": {
         "psr-4": {
             "Effectra\\LaravelModelOperations\\": "src/"
-        }
+        },
+        "files": [
+            "src/Helpers/functions.php"
+        ]
     },
     "extra": {
         "laravel": {
