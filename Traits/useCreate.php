@@ -5,7 +5,6 @@ namespace LaravelModelOperations\Traits;
 use Illuminate\Http\Request;
 use Closure;
 use ManyOperationException;
-use Throwable;
 use Exception;
 
 /**
@@ -37,6 +36,26 @@ trait UseCreate
     protected ?array $results = null;
 
     /**
+     * Get the last successfully created model.
+     *
+     * @return object|null
+     */
+    public function getModelCreated(): ?object
+    {
+        return $this->modelCreated;
+    }
+
+    /**
+     * Get the index of the failed model in batch creation (if any).
+     *
+     * @return  int|null
+     */ 
+    public function getModelFailedIndex()
+    {
+        return $this->modelFailedIndex;
+    }
+
+    /**
      * Create a single model instance.
      *
      * @param  \Illuminate\Http\Request|array  $data   Validated request data or array of attributes
@@ -64,16 +83,6 @@ trait UseCreate
     }
 
     /**
-     * Get the last successfully created model.
-     *
-     * @return object|null
-     */
-    public function getModelCreated(): ?object
-    {
-        return $this->modelCreated;
-    }
-
-    /**
      * Create multiple model instances from request data.
      *
      * @param  \Illuminate\Http\Request  $request The request containing an array of items
@@ -97,4 +106,58 @@ trait UseCreate
             return false;
         }
     }
+
+    /**
+     * Replicate a model instance by its ID.
+     *
+     * @param  int|string  $id The ID of the model to replicate
+     * @param  int  $times Number of times to replicate the model (default is 1)
+     * @return bool True if replication was successful, false otherwise
+     */
+    public function replicate(int|string $id,int $times=1): bool
+    {
+        $model = $this->model::find($id);
+
+        if (!$model) {
+            throw new Exception("Model with ID {$id} not found.");
+        }
+
+        $replicatedModels = [];
+        for ($i = 0; $i < $times; $i++) {
+            $replicatedModel = $model->replicate();
+            if ($replicatedModel->save()) {
+                $replicatedModels[] = $replicatedModel;
+            } else {
+                return false; // If any replication fails, return false
+            }
+        }
+
+        $this->modelCreated = end($replicatedModels);
+        return true;
+    }
+
+    /**
+     * Replicate multiple model instances by their IDs.
+     *
+     * @param  array<int|string>  $ids An array of model IDs to replicate
+     * @return bool True if all replications were successful, false otherwise
+     */
+    public function replicateMany(array $ids,int $times=1): bool
+    {
+        $this->results = [];
+        foreach ($ids as $id) {
+            try {
+                $this->results[] = $this->replicate($id, $times);
+            } catch (Exception $e) {
+                throw new ManyOperationException(
+                    index: array_search($id, $ids, true),
+                    message: "Failed to replicate model with ID {$id}: " . $e->getMessage(),
+                    previous: $e
+                );
+            }
+        }
+
+        return isSuccessfulResult($this->results);
+    }
+
 }
