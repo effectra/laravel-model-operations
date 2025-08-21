@@ -1,0 +1,34 @@
+{
+    "name": "effectra/laravel-model-operations",
+    "description": "A Laravel package for model operations.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Effectra",
+            "email": "info@effectra.com"
+        },
+        {
+            "name": "Mohammed Taha [BMT]",
+            "email": "info@mohammedtaha.me"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "illuminate/support": "^8.0|^9.0|^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Effectra\\LaravelModelOperations\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Effectra\\LaravelModelOperations\\Provider\\LaravelModelOperationsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
