@@ -10,16 +10,22 @@
         },
         {
             "name": "Mohammed Taha [BMT]",
-            "email": "info@mohammedtaha.me"
+            "email": "info@mohammedtaha.net"
         }
     ],
     "require": {
         "php": "^8.0",
-        "illuminate/support": "^8.0|^9.0|^10.0"
+        "illuminate/support": "^10.48",
+        "illuminate/database": "^10.38",
+        "illuminate/cache": "^10.48",
+        "illuminate/container": "^10.48",
+        "illuminate/http": "^10.0 || ^11.0",
+        "illuminate/validation": "^10.48"
     },
     "autoload": {
         "psr-4": {
-            "Effectra\\LaravelModelOperations\\": "src/"
+            "Effectra\\LaravelModelOperations\\": "src/",
+            "Effectra\\LaravelModelOperations\\Tests\\": "tests/"
         },
         "files": [
             "src/Helpers/functions.php"
@@ -33,5 +39,14 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "require-dev": {
+        "pestphp/pest": "^3.8",
+        "fakerphp/faker": "^1.24"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
 }
