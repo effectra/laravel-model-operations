@@ -21,6 +21,13 @@
       "src/Helpers/functions.php"
     ]
   },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Effectra\\LaravelModelOperations\\Providers\\LaravelModelOperationsServiceProvider"
+      ]
+    }
+  },
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require-dev": {
