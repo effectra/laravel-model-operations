@@ -2,10 +2,27 @@
 
 namespace Effectra\Operations\Provider;
 
-use Illuminate\Support\ServiceProvider;
+use Spatie\LaravelPackageTools\Commands\InstallCommand;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Spatie\LaravelPackageTools\Package;
 
-class LaravelModelOperationsServiceProvider extends ServiceProvider
+class LaravelModelOperationsServiceProvider extends PackageServiceProvider
 {
+    public function configurePackage(Package $package): void
+    {
+        $package
+            ->name('your-package-name')
+            ->hasConfigFile('model-operations.php')
+            ->sharesDataWithAllViews('downloads', 3)
+            ->hasTranslations()
+            ->publishesServiceProvider('LaravelModelOperationsServiceProvider')
+            ->hasInstallCommand(function (InstallCommand $command) {
+                $command
+                    ->publishConfigFile()
+                    ->copyAndRegisterServiceProviderInApp()
+                    ->askToStarRepoOnGitHub();
+            });
+    }
     /**
      * Register services.
      *
@@ -16,20 +33,5 @@ class LaravelModelOperationsServiceProvider extends ServiceProvider
         // Register bindings or singletons here
     }
 
-    /**
-     * Bootstrap services.
-     *
-     * @return void
-     */
-    public function boot()
-    {
-        // Perform post-registration booting of services
-        $this->publishes([
-            __DIR__.'/../../config/model-operations.php' => config_path('model-operations.php'),
-        ], 'config');
-
-        $this->mergeConfigFrom(
-            __DIR__.'/../../config/model-operations.php', 'model-operations'
-        );
-    }
+    
 }

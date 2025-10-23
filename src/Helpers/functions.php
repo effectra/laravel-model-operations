@@ -40,7 +40,7 @@ if (!function_exists('config')) {
 
         // Load config files once
         if (empty($config)) {
-            $configPath = __DIR__ . '/../config/';
+            $configPath = __DIR__ . '/../../config/';
             if (is_dir($configPath)) {
                 foreach (glob($configPath . '*.php') as $file) {
                     $name = basename($file, '.php');

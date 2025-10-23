@@ -1,10 +1,9 @@
 <?php 
 namespace Effectra\LaravelModelOperations\Tests\Mocks;
 
-use Illuminate\Contracts\Validation\Factory as ValidationFactory;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 
 class SimulatedFormRequest extends Request
 {
@@ -27,7 +26,10 @@ class SimulatedFormRequest extends Request
      */
     public function validated(): array
     {
-        $validator = Validator::make($this->all(), $this->rules);
+        $validatorFactory = new \Illuminate\Validation\Factory(new \Illuminate\Translation\Translator(
+            new \Illuminate\Translation\ArrayLoader(), 'en'
+        ));
+        $validator = $validatorFactory->make($this->all(), $this->rules);
 
         if ($validator->fails()) {
             throw new ValidationException($validator);

@@ -19,14 +19,22 @@ use Exception;
 trait UseDelete
 {
 
+   use useTrash;
+
    /**
     * The last successfully created model instance.
     *
-    * @var object|null
+    * @var object{id:string}|null
     */
    protected ?object $modelDeleted = null;
 
 
+   /**
+    * Delete a single model by its ID.
+    * @param int|string $id
+    * @param Closure{model:object} $onFinish
+    * @return bool|null
+    */
    public function delete(int|string $id, ?Closure $onFinish = null): bool
    {
       $model = $this->model::findOrFail($id);
@@ -34,8 +42,9 @@ trait UseDelete
          return false;
       }
       $this->modelDeleted = $model;
-      if (config('model-operations.use_trash', true)) {
-         $this->moveToTrash($this->modelDeleted);
+      if (config('model-operations.use_trash', false)) {
+         $ttl = config('model-operations.trash_ttl', 3600);
+         $this->moveToTrash($this->modelDeleted, $ttl);
       }
       $result = $model->delete();
       if ($onFinish) {
@@ -47,13 +56,13 @@ trait UseDelete
    /**
     * Delete multiple models by their IDs.
     * @param Request $request
-    * @param Closure|null $onFinish
+    * @param Closure|null $onFinish 
     * @return bool
     */
-   public function deleteMany(Request $request, ?Closure $onFinish = null): bool
+   public function deleteMany(array|Request $request, ?Closure $onFinish = null): bool
    {
       try {
-         $ids = $request->input('ids', []);
+         $ids = $request instanceof Request ? $request->input('ids', []) : $request;
          if (empty($ids)) {
             throw new Exception('No IDs provided for deletion.');
          }
@@ -66,8 +75,18 @@ trait UseDelete
           * @var bool[] $results
           */
          $results = [];
+
+         $canUseTrash = config('model-operations.use_trash', false);
+
+         $ttl = config('model-operations.trash_ttl', 3600);
+
          foreach ($models as $model) {
-            $results[] = $this->delete($model->id, $onFinish);
+            $result = $this->delete($model->id, $onFinish);
+            $results[] = $result;
+            if ($result && $canUseTrash) {
+               $idsDeleted = $this->getModelsDeletedIds();
+               $this->addToTrashModelsDeleted($this->modelDeleted->id, $idsDeleted, $ttl);
+            }
          }
 
          return isSuccessfulResult($results);
@@ -86,87 +105,32 @@ trait UseDelete
    {
       try {
          $models = $this->model::all();
-         $ids = $models->pluck('id')->toArray();
+
+         $canUseTrash = config('model-operations.use_trash', false);
+
+         $ttl = config('model-operations.trash_ttl', 3600);
+
          if ($models->isEmpty()) {
             return false;
          }
+
          /**
           * @var bool[] $results
           */
          $results = [];
          foreach ($models as $model) {
-            $results[] = $this->delete($model->id, $onFinish);
+            $result = $this->delete($model->id, $onFinish);
+            $results[] = $result;
+            if ($result && $canUseTrash) {
+               $idsDeleted = $this->getModelsDeletedIds();
+               $this->addToTrashModelsDeleted($this->modelDeleted->id, $idsDeleted, $ttl);
+            }
          }
-         Cache::put(
-            $this->trashKeyForAll(),
-            $ids,
-            config('model-operations.trash_ttl', 3600)
-         );
+
          return isSuccessfulResult($results);
       } catch (ManyOperationException $e) {
          $this->modelFailedIndex = $e->getIndex();
          return false;
-      }
-   }
-
-   protected function trashKeyForAll(): string
-   {
-      return sprintf('trashed_all_model_%s_keys', $this->resolveModelName());
-   }
-
-   protected function getTrashedIdsDeletedWithDeleteAll(): array
-   {
-      return Cache::get($this->trashKeyForAll(), []);
-   }
-
-   /**
-    * Move a deleted model to trash (cache) for potential recovery.
-    * @param object $model
-    * @param int $ttl
-    * @return bool
-    */
-   protected function moveToTrash(object $model, int $ttl = 3600): bool
-   {
-      return Cache::put($this->trashKey($model->id), $model->getAttributes(), $ttl);
-   }
-
-   /**
-    * Generate a unique cache key for a trashed model.
-    * @param int|string $id
-    * @return string
-    */
-   public function trashKey(int|string $id): string
-   {
-      return sprintf('trashed_model_%s_%s', $this->resolveModelName(), $id);
-      ;
-   }
-
-   /**
-    * Get the base key name for trashed models of the current model type.
-    * @return string
-    */
-   private function trashKeyName(): string
-   {
-      return sprintf('trashed_model_%s_', $this->resolveModelName());
-   }
-
-   /**
-    * Empty the trash by clearing all cached trashed models.
-    * @return void
-    */
-   protected function emptyTrash()
-   {
-      // Clear all cached trashed models using preg functions
-      $cacheStore = Cache::getStore();
-      if (method_exists($cacheStore, 'getRedis')) {
-         $redis = $cacheStore->getRedis();
-         $prefix = $cacheStore->getPrefix() . $this->trashKeyName();
-         $allKeys = $redis->keys($prefix . '*');
-         foreach ($allKeys as $key) {
-            if (preg_match('/^' . preg_quote($prefix, '/') . '\d+$/', $key)) {
-               $redis->del($key);
-            }
-         }
       }
    }
 
@@ -232,14 +196,20 @@ trait UseDelete
     */
    public function undoDeleteAll(): bool
    {
-      $ids = $this->getTrashedIdsDeletedWithDeleteAll();
+      $ids = $this->getModelsDeletedIds();
       if (empty($ids)) {
          return false;
       }
       $results = [];
-      foreach ($ids as $key) {
-         $results[] = $this->undoDelete($key);
-         Cache::forget($this->trashKeyForAll());
+      foreach ($ids as $idDeleted) {
+         if ($result = $this->undoDelete($idDeleted)) {
+            $this->addToTrashModelsDeleted(
+               $this->modelDeleted->id,
+               array_filter($ids, fn($id) => $id !== $idDeleted),
+               config('model-operations.trash_ttl', 3600)
+            );
+         }
+         $results[] = $result;
       }
       return isSuccessfulResult($results);
    }

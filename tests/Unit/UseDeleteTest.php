@@ -5,8 +5,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\VarDumper\VarDumper;
 
 test('it deletes a model by id', function () {
-    $post = Post::create(['title' => 'Test Post','body' => 'This is a test post.']);
-    
+    $post = Post::create(['title' => 'Test Post', 'body' => 'This is a test post.']);
+
     $controller = new PostController();
 
     $result = $controller->delete($post->id);
@@ -24,11 +24,11 @@ test('it deletes multiple models by ids', function () {
     $result = $controller->deleteMany($request);
 
     expect($result)->toBeTrue();
-    
+
 });
 
 test('it moves a deleted model to trash', function () {
-    $post = Post::create(['title' => 'Trash Me','body' => 'I should be in the trash.']);
+    $post = Post::create(['title' => 'Trash Me', 'body' => 'I should be in the trash.']);
     $controller = new PostController();
     $controller->delete($post->id);
 
@@ -48,12 +48,12 @@ test('it deletes all models', function () {
 
 test('it handles deletion of non-existent model gracefully', function () {
     $controller = new PostController();
-    
+
     expect(fn() => $controller->delete(9999))->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 });
 
 test('it can undo a single deletion', function () {
-    $post = Post::create(['title' => 'Restore Me','body' => 'I should be restored.']);
+    $post = Post::create(['title' => 'Restore Me', 'body' => 'I should be restored.']);
     $controller = new PostController();
     $controller->delete($post->id);
 
@@ -65,7 +65,7 @@ test('it can undo a single deletion', function () {
 });
 
 test('it fails to undo deletion if not in trash', function () {
-    $post = Post::create(['title' => 'Cannot Restore','body' => 'This post was never deleted.']);
+    $post = Post::create(['title' => 'Cannot Restore', 'body' => 'This post was never deleted.']);
     $controller = new PostController();
 
     $restored = $controller->undoDelete($post->id);
@@ -114,42 +114,46 @@ test('it fails to undo multiple deletions if not in trash', function () {
 
 
 test('it can undo deletion of all trashed models', function () {
-   // Create and delete multiple posts
-   $posts = Post::factory()->count(4)->create();
-   $ids = $posts->pluck('id')->toArray();
+    Post::truncate();
+    Cache::flush();
+    expect(Post::count())->toBe(0);
+    // Create and delete multiple posts
+    $posts = Post::factory()->count(4)->create();
+    $ids = $posts->pluck('id')->toArray();
 
-   $controller = new PostController();
+    $controller = new PostController();
 
-   $controller->deleteAll();
+    $controller->deleteAll();
 
-   // Ensure all posts are deleted and in trash
-   foreach ($ids as $id) {
-      expect(Post::find($id))->toBeNull();
-      $key = $controller->trashKey($id);
-      expect(Cache::has($key))->toBeTrue();
-   }
+    // Ensure all posts are deleted and in trash
+    foreach ($ids as $id) {
+        expect(Post::find($id))->toBeNull();
+        $key = $controller->trashKey($id);
+        expect(Cache::has($key))->toBeTrue();
+    }
 
-   // Undo delete all
-   $restored = $controller->undoDeleteAll();
+    // Undo delete all
+    $restored = $controller->undoDeleteAll();
 
-   expect($restored)->toBeTrue();
+    expect(Post::count())->toBe(4);
+    expect($restored)->toBeTrue();
 
-//    Ensure all posts are restored and no longer in trash
-   foreach ($ids as $id) {
-      expect(Post::find($id))->not()->toBeNull();
-      $key = $controller->trashKey($id);
-      expect(Cache::has($key))->toBeFalse();
-   }
+    //    Ensure all posts are restored and no longer in trash
+    foreach ($ids as $id) {
+        expect(Post::find($id))->not()->toBeNull();
+        $key = $controller->trashKey($id);
+        expect(Cache::has($key))->toBeFalse();
+    }
 });
 
 test('it fails to undo deletion if trash is empty', function () {
-   $controller = new PostController();
+    $controller = new PostController();
 
-   // Ensure trash is empty
-   Cache::flush();
+    // Ensure trash is empty
+    Cache::flush();
 
-   $restored = $controller->undoDeleteAll();
+    $restored = $controller->undoDeleteAll();
 
-   expect($restored)->toBeFalse();
+    expect($restored)->toBeFalse();
 });
 

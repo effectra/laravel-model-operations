@@ -1,0 +1,2 @@
+composer require fakerphp/faker  fruitcake/php-cors  guzzlehttp/uri-template  illuminate/cache  illuminate/database  illuminate/http  illuminate/session 
+composer require illuminate/validation illuminate/translation illuminate/container illuminate/filesystem illuminate/support
