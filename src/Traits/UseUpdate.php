@@ -47,7 +47,7 @@ trait UseUpdate
             throw new \InvalidArgumentException('The Request object must have a validated() method. Ensure it is a Form Request.');
         }
         $attributes = $data instanceof Request
-            ? $data->all()
+            ? $data->validated()
             : $data;
  
         $model = $this->model::findOrFail($id);
