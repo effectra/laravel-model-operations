@@ -1,6 +1,6 @@
 <?php
 
-namespace Effectra\Operations\Provider;
+namespace Effectra\LaravelModelOperations\Providers;
 
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -11,16 +11,15 @@ class LaravelModelOperationsServiceProvider extends PackageServiceProvider
     public function configurePackage(Package $package): void
     {
         $package
-            ->name('your-package-name')
-            ->hasConfigFile('model-operations.php')
-            ->sharesDataWithAllViews('downloads', 3)
+            ->name('laravel-model-operations')
+            ->hasConfigFile('model-operations')
             ->hasTranslations()
             ->publishesServiceProvider('LaravelModelOperationsServiceProvider')
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfigFile()
                     ->copyAndRegisterServiceProviderInApp()
-                    ->askToStarRepoOnGitHub();
+                    ->askToStarRepoOnGitHub('effectra/laravel-model-operations');
             });
     }
     /**
